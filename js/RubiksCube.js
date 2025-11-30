@@ -119,6 +119,37 @@ function unlockAlgEditor(){
     }
 }
 
+function closeAlgEditorPanel(){
+    var panel = document.getElementById("algEditorPanel");
+    if (panel){
+        panel.style.display = "none";
+    }
+}
+
+function previewTypedAlg(){
+    var answerInput = document.getElementById("answerInput");
+    if (!answerInput){
+        return;
+    }
+    if (algorithmHistory.length === 0){
+        return;
+    }
+    reTestAlg();
+    var algStr = answerInput.value.trim();
+    if (algStr === ""){
+        return;
+    }
+    try {
+        var simplified = alg.cube.simplify(algStr);
+        doAlg(simplified);
+        drawCube(cube.cubestate);
+        var lastTest = algorithmHistory[algorithmHistory.length-1];
+        updateVisualCube(lastTest.preorientation + lastTest.scramble + " " + simplified);
+    } catch (error) {
+        // ignore invalid partial input
+    }
+}
+
 function applyAlgOverride(algStr){
     var normalized = normalizeAlgString(algStr);
     return algOverrides[normalized] || algStr;
@@ -228,6 +259,7 @@ if (answerInput){
             answerInput.value = before + insertChar + after;
             const newPos = start + insertChar.length;
             answerInput.setSelectionRange(newPos, newPos);
+            setTimeout(previewTypedAlg, 0);
             return;
         }
     });
@@ -237,6 +269,7 @@ if (answerInput){
             checkTypedAnswer();
         }
     });
+    answerInput.addEventListener("input", previewTypedAlg);
 }
 var saveAlgEditButton = document.getElementById("saveAlgEdit");
 if (saveAlgEditButton){
@@ -1562,6 +1595,7 @@ function nextScramble(){
     testAlg(generateAlgTest());
     historyIndex = algorithmHistory.length - 1;
     resetAnswerUI();
+    closeAlgEditorPanel();
 }
 
 //CUBE OBJECT
