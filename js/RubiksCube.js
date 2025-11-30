@@ -137,8 +137,9 @@ if (useVirtual){
 }
 
 var visualCubeContainer = document.getElementById("visual-cube-container");
-if (visualCubeContainer){
-    visualCubeContainer.addEventListener("click", function(){
+var visualCubeImage = document.getElementById("visualcube");
+if (visualCubeImage){
+    visualCubeImage.addEventListener("click", function(){
         var currentMode = localStorage.getItem("visualCubeMode") || "flat";
         var nextMode = cubeModes[(cubeModes.indexOf(currentMode) + 1) % cubeModes.length];
         setCubeMode(nextMode);
@@ -232,6 +233,32 @@ if (openAlgEditor){
             document.getElementById("algEditor").value = currentTest.appliedAlgs.join("\n");
         }
     });
+}
+
+var settingsToggle = document.getElementById("settingsToggle");
+var settingsClose = document.getElementById("settingsClose");
+var settingsPanel = document.getElementById("settingsPanel");
+function openSettings(){
+    if (settingsPanel){
+        settingsPanel.style.display = "block";
+    }
+}
+function closeSettings(){
+    if (settingsPanel){
+        settingsPanel.style.display = "none";
+    }
+}
+if (settingsToggle){
+    settingsToggle.addEventListener("click", function(){
+        if (settingsPanel && settingsPanel.style.display === "block"){
+            closeSettings();
+        } else {
+            openSettings();
+        }
+    });
+}
+if (settingsClose){
+    settingsClose.addEventListener("click", closeSettings);
 }
 
 var mirrorAllAlgs = document.getElementById("mirrorAllAlgs");
@@ -1068,32 +1095,8 @@ function testAlg(algTest, addToHistory=true){
 }
 
 function updateAlgsetStatistics(algList){
-    if (document.getElementById("algsetpicker").value == "F3L"){
-        var stats = {"Number of algs": "43,252,003,274,489,856,000"};
-    }
-    else {
-        var stats = {"STM": averageMovecount(algList, "btm", false).toFixed(3),
-                 "SQTM": averageMovecount(algList, "bqtm", false).toFixed(3),
-                 "STM (including AUF)": averageMovecount(algList, "btm", true).toFixed(3),
-                 "SQTM (including AUF)": averageMovecount(algList, "bqtm", true).toFixed(3),
-                 "Number of algs": algList.length};
-    }
-    var table = document.getElementById("algsetStatistics");
-    table.innerHTML = "";
-    var th = document.createElement("th");
-    th.appendChild(document.createTextNode("Algset Statistics"));
-    table.appendChild(th);
-    for (var key in stats){
-        var tr = document.createElement("tr");
-        var description = document.createElement("td");
-        var value = document.createElement("td");
-        description.appendChild(document.createTextNode(key));
-        value.appendChild(document.createTextNode(stats[key]));
-        tr.appendChild(description);
-        tr.appendChild(value);
-        table.appendChild(tr);
-    }
-
+    // Statistics panel removed
+    return;
 }
 
 function reTestAlg(){
@@ -1231,7 +1234,7 @@ function checkTypedAnswer(){
         feedback.innerHTML = "Correct!";
         feedback.style.color = "#90f182";
     } else {
-        feedback.innerHTML = "Not quite. Solution: " + currentTest.solutions.join(" / ");
+        feedback.innerHTML = "Not quite. Solution:<br>" + currentTest.solutions.join("<br>");
         feedback.style.color = "#ff7b7b";
     }
 }

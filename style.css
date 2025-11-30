@@ -59,7 +59,7 @@ p.scramble {
 
 .main-grid {
     display: grid;
-    grid-template-columns: 280px 1fr 280px;
+    grid-template-columns: 1fr;
     gap: 18px;
     padding: 18px;
 }
@@ -83,7 +83,7 @@ th, td, tr{
     font-weight: 600;
 }
 
-.column_left, .column_right, .column_middle {
+.column_middle {
     background: rgba(255,255,255,0.03);
     border: 1px solid rgba(255,255,255,0.05);
     border-radius: 14px;
@@ -268,6 +268,69 @@ a:visited {
     padding: 10px 14px;
     border-radius: 10px;
     cursor: pointer;
+}
+
+.settings-button {
+    background: rgba(255,255,255,0.1);
+    color: #e7ecf5;
+    border: 1px solid rgba(255,255,255,0.2);
+    padding: 10px 14px;
+    border-radius: 10px;
+    cursor: pointer;
+}
+
+.settings-panel {
+    position: fixed;
+    top: 70px;
+    right: 16px;
+    width: 320px;
+    max-height: calc(100vh - 90px);
+    overflow-y: auto;
+    background: rgba(5,9,18,0.95);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 14px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.45);
+    padding: 16px;
+    z-index: 5;
+}
+
+.settings-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.settings-close {
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.12);
+    color: #e7ecf5;
+    border-radius: 8px;
+    cursor: pointer;
+    padding: 6px 10px;
+}
+
+.settings-section {
+    margin-bottom: 16px;
+}
+
+.note-card {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 10px;
+    padding: 10px;
+    margin: 8px 0;
+    text-align: left;
+}
+
+.pill-link {
+    display: inline-block;
+    padding: 8px 12px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.12);
+    color: #8ad0ff;
+    text-decoration: none;
 }
 
 @media (max-width: 1024px) {

@@ -20,66 +20,60 @@
                 <div class="scramble-wrap">
                     <p id="scramble" class=scramble>Scramble</p>
                 </div>
+                <button id="settingsToggle" class="settings-button" aria-label="Toggle settings">☰ Settings</button>
             </header>
-            <div class="main-grid">
-            <div class=column_left>
 
-                <select id="algsetpicker" size=18 class=algsetpicker>
-                </select>
-                <div id="cboxes"></div>
-                <br>Leave all checkboxes unchecked to test on the full algset.
-
-                <br>
-
-                <h2>Settings</h2>
-                <form action="javascript:void(0);">
-                    
-                    <input id="showScramble" type="checkbox">Show Scramble<br>
-                    <input id="realScrambles" type="checkbox">Use Real Scrambles<br>
-                    <input id="randAUF" type="checkbox">Random AUF<br>
-                    <input id="prescramble" type="checkbox" checked="true">Scramble subsequent steps (requires real scrambles to be checked)<br>
-                    <input id="goInOrder" type="checkbox">Go in order<br>
-                    <input id="mirrorAllAlgs" type="checkbox">Mirror across <span style="font-family: Consolas, monospace;">M</span> <input id="randomizeMMirror" type="checkbox">Randomize<br>
-                    <input id="mirrorAllAlgsAcrossS" type="checkbox">Mirror across <span style="font-family: Consolas, monospace;">S</span> <input id="randomizeSMirror" type="checkbox">Randomize<br>
-                    <input id="autoCorrectRotation" type="checkbox">Auto-fix algorithm rotation<br>
-
-                    Line style <select id="lines">
+            <div id="settingsPanel" class="settings-panel" style="display:none;">
+                <div class="settings-header">
+                    <h2>Settings</h2>
+                    <button id="settingsClose" class="settings-close" aria-label="Close settings">✕</button>
+                </div>
+                <div class="settings-section">
+                    <h3>Alg set</h3>
+                    <select id="algsetpicker" size=10 class=algsetpicker>
+                    </select>
+                    <div id="cboxes"></div>
+                    <p class="note">Leave all boxes unchecked to drill the full set.</p>
+                </div>
+                <div class="settings-section">
+                    <h3>General</h3>
+                    <label><input id="showScramble" type="checkbox"> Show Scramble</label><br>
+                    <label><input id="realScrambles" type="checkbox"> Use Real Scrambles</label><br>
+                    <label><input id="randAUF" type="checkbox"> Random AUF</label><br>
+                    <label><input id="prescramble" type="checkbox" checked="true"> Scramble subsequent steps</label><br>
+                    <label><input id="goInOrder" type="checkbox"> Go in order</label><br>
+                    <label><input id="mirrorAllAlgs" type="checkbox"> Mirror across <span style="font-family: Consolas, monospace;">M</span></label> <label><input id="randomizeMMirror" type="checkbox"> Randomize</label><br>
+                    <label><input id="mirrorAllAlgsAcrossS" type="checkbox"> Mirror across <span style="font-family: Consolas, monospace;">S</span></label> <label><input id="randomizeSMirror" type="checkbox"> Randomize</label><br>
+                    <label><input id="autoCorrectRotation" type="checkbox"> Auto-fix algorithm rotation</label><br><br>
+                    Line style 
+                    <select id="lines">
                         <option value="none"> None </option>
                         <option selected value="thin-black"> Thin black </option>
                         <option value="thick-black"> Thick black </option>
                         <option value="thin-gray"> Thin gray </option>
                         <option value="thick-gray"> Thick gray </option>
-                    </select> <br>
-                    Virtual cube size: <select id="cubeType">
+                    </select> 
+                    <br>
+                    Virtual cube size: 
+                    <select id="cubeType">
                         <option value="3x3" default>3x3</option>
                         <option value="2x2">2x2</option>
-                    </select><br><br>
-
-                    Preorientation: <br>
-
-                    <input id="fullCN" type="checkbox"> Full colour neutrality<br>
-                    or<br>
-                    Starting from WCA orientation: <br>
-                    First do one
-                    <input type="text" id="colourneutrality1" value="" size="1"> 
-                    rotation<br>
-
-                    then do a random number of 
-                    <input type="text" id="colourneutrality2" value="" size="1"> 
-                    rotations, <br>
-
-                    and finally do a random number of 
-                    <input type="text" id="colourneutrality3" value="" size="1"> 
-                    rotations.<br>
-                    <br>
-                    <a href="scramblingNote.html">Note on preorientation settings</a> 
-                    <br><br>
-
-                </form>
+                    </select>
+                </div>
+                <div class="settings-section">
+                    <h3>Preorientation</h3>
+                    <label><input id="fullCN" type="checkbox"> Full colour neutrality</label><br>
+                    <div class="note-card">
+                        Starting from WCA orientation:<br>
+                        First do one <input type="text" id="colourneutrality1" value="" size="1"> rotation<br>
+                        then do a random number of <input type="text" id="colourneutrality2" value="" size="1"> rotations,<br>
+                        and finally do a random number of <input type="text" id="colourneutrality3" value="" size="1"> rotations.
+                    </div>
+                    <a class="pill-link" href="scramblingNote.html">Note on preorientation settings</a> 
+                </div>
             </div>
 
-
-
+            <div class="main-grid">
             <div class=column_middle>
                 <div class="cube-stage">
                     <div id="simcube"> 
@@ -88,7 +82,6 @@
                     <div id="visual-cube-container">
                         <div class="cube-mode-label" id="cubeModeLabel">Flat view</div>
                         <img src="https://www.cubing.net/api/visualcube/?fmt=svg&size=320&view=plan&bg=black&alg=x2" id="visualcube" title="Click to switch between flat, 3D, and virtual cube"/>
-                        <p class="hint">Click the cube to switch flat &rarr; 3D &rarr; virtual.</p>
                     </div>
                 </div>
                 <div class="card">
@@ -118,22 +111,6 @@
                 </div>
                 </div>
             </div>
-
-
-
-            <div class=column_right>
-                <div style="text-align: left">
-                    <table id="algsetStatistics">
-                    </table>
-                    <h2>Instructions</h2>
-                    Type your algorithm into the answer box, then click Check answer or press Enter.<br>
-                    Use Next Scramble to load a new case. Edit the algorithm text box if you want to practise a different solution for this case.
-                </div>
-
-
-
-            </div>
-
             </div>
         </div>
 
