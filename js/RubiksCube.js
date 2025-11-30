@@ -112,6 +112,13 @@ function normalizeAlgString(algStr){
     return simplified.replace(/\s+/g, "");
 }
 
+function unlockAlgEditor(){
+    var container = document.getElementById("alg-editor");
+    if (container){
+        container.style.display = "block";
+    }
+}
+
 function applyAlgOverride(algStr){
     var normalized = normalizeAlgString(algStr);
     return algOverrides[normalized] || algStr;
@@ -211,6 +218,20 @@ if (checkAnswerButton){
 var answerInput = document.getElementById("answerInput");
 if (answerInput){
     answerInput.addEventListener("keydown", function(event){
+        if (event.key.length === 1 && /[a-z]/i.test(event.key) && !event.ctrlKey && !event.metaKey && !event.altKey){
+            event.preventDefault();
+            const insertChar = event.shiftKey ? event.key.toLowerCase() : event.key.toUpperCase();
+            const start = answerInput.selectionStart;
+            const end = answerInput.selectionEnd;
+            const before = answerInput.value.slice(0, start);
+            const after = answerInput.value.slice(end);
+            answerInput.value = before + insertChar + after;
+            const newPos = start + insertChar.length;
+            answerInput.setSelectionRange(newPos, newPos);
+            return;
+        }
+    });
+    answerInput.addEventListener("keydown", function(event){
         if (event.key === "Enter"){
             event.preventDefault();
             checkTypedAnswer();
@@ -260,6 +281,25 @@ if (settingsToggle){
 if (settingsClose){
     settingsClose.addEventListener("click", closeSettings);
 }
+document.addEventListener("keydown", function(event){
+    if (event.key === "Escape"){
+        closeSettings();
+    }
+});
+var tabButtons = document.getElementsByClassName("tab-button");
+for (let i = 0; i < tabButtons.length; i++){
+    tabButtons[i].addEventListener("click", function(){
+        for (let j = 0; j < tabButtons.length; j++){
+            tabButtons[j].classList.remove("active");
+            var tabId = tabButtons[j].getAttribute("data-tab");
+            var tab = document.getElementById(tabId);
+            if (tab){ tab.classList.remove("active"); }
+        }
+        this.classList.add("active");
+        var target = document.getElementById(this.getAttribute("data-tab"));
+        if (target){ target.classList.add("active"); }
+    });
+}
 
 var mirrorAllAlgs = document.getElementById("mirrorAllAlgs");
 mirrorAllAlgs.addEventListener("click", function(){
@@ -277,11 +317,22 @@ fullCN.addEventListener("click", function(){
 });
 
 var cubeType = document.getElementById("cubeType");
-cubeType.addEventListener("change", function(){
-    localStorage.setItem("cubeType", this.value);
-    drawCube(cube.cubestate);
-    updateVisualCube("");
-});
+if (cubeType){
+    cubeType.addEventListener("change", function(){
+        localStorage.setItem("cubeType", this.value);
+        drawCube(cube.cubestate);
+        updateVisualCube("");
+    });
+}
+
+var simcubeCanvas = document.getElementById("cube");
+if (simcubeCanvas){
+    simcubeCanvas.addEventListener("click", function(){
+        var currentMode = localStorage.getItem("visualCubeMode") || "flat";
+        var nextMode = cubeModes[(cubeModes.indexOf(currentMode) + 1) % cubeModes.length];
+        setCubeMode(nextMode);
+    });
+}
 
 var algsetpicker = document.getElementById("algsetpicker");
 algsetpicker.addEventListener("change", function(){
@@ -1173,6 +1224,7 @@ function displayAlgorithm(algTest, reTest=true){
     updateTrainer(algTest.scramble, algTest.solutions.join("<br><br>"), null);
 
     scramble.style.color = '#e6e6e6';
+    unlockAlgEditor();
 }
 
 function displayAlgorithmFromHistory(index){    
@@ -1184,6 +1236,7 @@ function displayAlgorithmFromHistory(index){
     updateTrainer(algTest.getHtmlFormattedScramble(), algTest.solutions.join("<br><br>"), algTest.preorientation+algTest.scramble);
     resetAnswerUI(algTest);
     scramble.style.color = '#e6e6e6';
+    unlockAlgEditor();
 }
 
 function displayAlgorithmForPreviousTest(reTest=true){//not a great name
@@ -1201,6 +1254,7 @@ function displayAlgorithmForPreviousTest(reTest=true){//not a great name
     updateTrainer(lastTest.getHtmlFormattedScramble(), lastTest.solutions.join("<br><br>"), null);
     resetAnswerUI(lastTest);
     scramble.style.color = '#e6e6e6';
+    unlockAlgEditor();
 }
 
 function checkTypedAnswer(){
@@ -1237,6 +1291,8 @@ function checkTypedAnswer(){
         feedback.innerHTML = "Not quite. Solution:<br>" + currentTest.solutions.join("<br>");
         feedback.style.color = "#ff7b7b";
     }
+    feedback.style.display = "block";
+    unlockAlgEditor();
 }
 
 function saveCurrentAlgEdit(){
@@ -1492,7 +1548,8 @@ function resetAnswerUI(targetTest = algorithmHistory[algorithmHistory.length-1])
     }
     var feedback = document.getElementById("answerFeedback");
     if (feedback){
-        feedback.innerHTML = "&nbsp;";
+        feedback.innerHTML = "";
+        feedback.style.display = "none";
     }
     var algEditor = document.getElementById("algEditor");
     if (algEditor && targetTest && document.getElementById("algEditorPanel").style.display === "block"){

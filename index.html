@@ -20,56 +20,64 @@
                 <div class="scramble-wrap">
                     <p id="scramble" class=scramble>Scramble</p>
                 </div>
-                <button id="settingsToggle" class="settings-button" aria-label="Toggle settings">☰ Settings</button>
+                <button id="settingsToggle" class="settings-button" aria-label="Toggle settings">&#9776; Settings</button>
             </header>
 
             <div id="settingsPanel" class="settings-panel" style="display:none;">
                 <div class="settings-header">
                     <h2>Settings</h2>
-                    <button id="settingsClose" class="settings-close" aria-label="Close settings">✕</button>
+                    <button id="settingsClose" class="settings-close" aria-label="Close settings">&#10005;</button>
                 </div>
-                <div class="settings-section">
-                    <h3>Alg set</h3>
-                    <select id="algsetpicker" size=10 class=algsetpicker>
-                    </select>
-                    <div id="cboxes"></div>
-                    <p class="note">Leave all boxes unchecked to drill the full set.</p>
+                <div class="tab-buttons">
+                    <button class="tab-button active" data-tab="tab-alg">Alg set</button>
+                    <button class="tab-button" data-tab="tab-general">General</button>
+                    <button class="tab-button" data-tab="tab-pre">Preorientation</button>
                 </div>
-                <div class="settings-section">
-                    <h3>General</h3>
-                    <label><input id="showScramble" type="checkbox"> Show Scramble</label><br>
-                    <label><input id="realScrambles" type="checkbox"> Use Real Scrambles</label><br>
-                    <label><input id="randAUF" type="checkbox"> Random AUF</label><br>
-                    <label><input id="prescramble" type="checkbox" checked="true"> Scramble subsequent steps</label><br>
-                    <label><input id="goInOrder" type="checkbox"> Go in order</label><br>
-                    <label><input id="mirrorAllAlgs" type="checkbox"> Mirror across <span style="font-family: Consolas, monospace;">M</span></label> <label><input id="randomizeMMirror" type="checkbox"> Randomize</label><br>
-                    <label><input id="mirrorAllAlgsAcrossS" type="checkbox"> Mirror across <span style="font-family: Consolas, monospace;">S</span></label> <label><input id="randomizeSMirror" type="checkbox"> Randomize</label><br>
-                    <label><input id="autoCorrectRotation" type="checkbox"> Auto-fix algorithm rotation</label><br><br>
-                    Line style 
-                    <select id="lines">
-                        <option value="none"> None </option>
-                        <option selected value="thin-black"> Thin black </option>
-                        <option value="thick-black"> Thick black </option>
-                        <option value="thin-gray"> Thin gray </option>
-                        <option value="thick-gray"> Thick gray </option>
-                    </select> 
-                    <br>
-                    Virtual cube size: 
-                    <select id="cubeType">
-                        <option value="3x3" default>3x3</option>
-                        <option value="2x2">2x2</option>
-                    </select>
-                </div>
-                <div class="settings-section">
-                    <h3>Preorientation</h3>
-                    <label><input id="fullCN" type="checkbox"> Full colour neutrality</label><br>
-                    <div class="note-card">
-                        Starting from WCA orientation:<br>
-                        First do one <input type="text" id="colourneutrality1" value="" size="1"> rotation<br>
-                        then do a random number of <input type="text" id="colourneutrality2" value="" size="1"> rotations,<br>
-                        and finally do a random number of <input type="text" id="colourneutrality3" value="" size="1"> rotations.
+                <div id="tab-alg" class="tab-content active">
+                    <div class="settings-section">
+                        <select id="algsetpicker" size=10 class=algsetpicker>
+                        </select>
+                        <div id="cboxes"></div>
+                        <p class="note">Leave all boxes unchecked to drill the full set.</p>
                     </div>
-                    <a class="pill-link" href="scramblingNote.html">Note on preorientation settings</a> 
+                </div>
+                <div id="tab-general" class="tab-content">
+                    <div class="settings-section">
+                        <label><input id="showScramble" type="checkbox"> Show Scramble</label><br>
+                        <label><input id="realScrambles" type="checkbox"> Use Real Scrambles</label><br>
+                        <label><input id="randAUF" type="checkbox"> Random AUF</label><br>
+                        <label><input id="prescramble" type="checkbox" checked="true"> Scramble subsequent steps</label><br>
+                        <label><input id="goInOrder" type="checkbox"> Go in order</label><br>
+                        <label><input id="mirrorAllAlgs" type="checkbox"> Mirror across <span style="font-family: Consolas, monospace;">M</span></label> <label><input id="randomizeMMirror" type="checkbox"> Randomize</label><br>
+                        <label><input id="mirrorAllAlgsAcrossS" type="checkbox"> Mirror across <span style="font-family: Consolas, monospace;">S</span></label> <label><input id="randomizeSMirror" type="checkbox"> Randomize</label><br>
+                        <label><input id="autoCorrectRotation" type="checkbox"> Auto-fix algorithm rotation</label><br><br>
+                        Line style 
+                        <select id="lines">
+                            <option value="none"> None </option>
+                            <option selected value="thin-black"> Thin black </option>
+                            <option value="thick-black"> Thick black </option>
+                            <option value="thin-gray"> Thin gray </option>
+                            <option value="thick-gray"> Thick gray </option>
+                        </select> 
+                        <br>
+                        Virtual cube size: 
+                        <select id="cubeType">
+                            <option value="3x3" default>3x3</option>
+                            <option value="2x2">2x2</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="tab-pre" class="tab-content">
+                    <div class="settings-section">
+                        <label><input id="fullCN" type="checkbox"> Full colour neutrality</label><br>
+                        <div class="note-card">
+                            Starting from WCA orientation:<br>
+                            First do one <input type="text" id="colourneutrality1" value="" size="1"> rotation<br>
+                            then do a random number of <input type="text" id="colourneutrality2" value="" size="1"> rotations,<br>
+                            and finally do a random number of <input type="text" id="colourneutrality3" value="" size="1"> rotations.
+                        </div>
+                        <a class="pill-link" href="scramblingNote.html">Note on preorientation settings</a> 
+                    </div>
                 </div>
             </div>
 
@@ -92,11 +100,10 @@
                 <div id="answer-area">
                     <label for="answerInput">Type your answer:</label><br>
                     <input id="answerInput" type="text" autocomplete="off">
-                    <button id="checkAnswer" type="button">Check answer</button>
                     <p id="answerFeedback" class="feedback">&nbsp;</p>
                 </div>
 
-                <div id="alg-editor">
+                <div id="alg-editor" style="display:none;">
                     <button id="openAlgEditor" type="button">Edit this algorithm</button>
                     <div id="algEditorPanel" style="display:none;">
                         <textarea id="algEditor" rows="3"></textarea><br>

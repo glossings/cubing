@@ -125,15 +125,17 @@
                     <div id="answer-area">
                         <label for="answerInput">Type your answer:</label><br>
                         <input id="answerInput" type="text" autocomplete="off">
-                        <button id="checkAnswer" type="button">Check answer</button>
+                        <button id="checkAnswer" type="button" class="secondary-btn">Check answer</button>
                         <p id="answerFeedback" class="feedback">&nbsp;</p>
                     </div>
 
-                    <div id="alg-editor">
-                        <label for="algEditor">Edit this algorithm:</label><br>
-                        <textarea id="algEditor" rows="3"></textarea><br>
-                        <button id="saveAlgEdit" type="button">Save edit</button>
-                        <p class="note">Edits apply to future scrambles for this case.</p>
+                    <div id="alg-editor" style="display:none;">
+                        <button id="openAlgEditor" type="button">Edit this algorithm</button>
+                        <div id="algEditorPanel" style="display:none;">
+                            <textarea id="algEditor" rows="3"></textarea><br>
+                            <button id="saveAlgEdit" type="button">Save edit</button>
+                            <p class="note">Edits apply to future scrambles for this case.</p>
+                        </div>
                     </div>
 
                 </div>
