@@ -32,16 +32,6 @@ hr {
     width: 100%;
 }
 
-#timer {
-    font-family: Arial;
-    font-size: 30px;
-    color: white;
-}
-
-#statistics {
-    font-size: 20px;
-}
-
 #flexbox {
     display: flex;
     flex-direction: column;
@@ -62,6 +52,15 @@ th,
 td,
 tr {
     border: none;
+}
+
+.note {
+    color: #cccccc;
+    font-size: 12px;
+}
+
+.feedback {
+    color: #ff7b7b;
 }
 
 #touchStartArea {
@@ -139,6 +138,27 @@ tr {
 
 .algsetpicker {
     width: 70%;
+}
+
+#answer-area,
+#alg-editor {
+    margin-top: 16px;
+    text-align: left;
+    padding: 0 12px;
+}
+
+#answerInput {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+#algEditor {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+#answerFeedback {
+    min-height: 1.2em;
 }
 
 a:link {

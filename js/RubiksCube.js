@@ -8,7 +8,9 @@ var ctx = canvas.getContext("2d");
 var stickerSize = canvas.width/5;
 var currentAlgIndex = 0;
 var algorithmHistory = [];
+var historyIndex = -1;
 var shouldRecalculateStatistics = true;
+var cubeModes = ["flat", "3d", "virtual"];
 
 createAlgsetPicker();
 /*
@@ -17,31 +19,6 @@ window.onbeforeunload = function () {
 }*/
 Cube.initSolver();
 
-var connectGiiker = document.getElementById("connectGiiker");
-connectGiiker.addEventListener('click', async () => {
-
-    connectGiiker.disabled = true;
-    try {
-        const giiker = await connect();
-        connectGiiker.textContent = 'Connected!';
-        setVirtualCube(true);
-        giiker.on('move', (move) => {
-            doAlg(move.notation);
-        });
-
-        giiker.on('disconnected', () => {
-            alert("Giiker cube disconnected");
-            connectGiiker.textContent = 'Connect Giiker Cube';
-            connectGiiker.disabled = false;
-        })
-    
-    } catch(e) {
-
-        connectGiiker.textContent = 'Connect Giiker Cube';
-        connectGiiker.disabled = false;
-    }
-});
-
 document.getElementById("loader").style.display = "none";
 var myVar = setTimeout(showPage, 1);
 function showPage(){
@@ -49,31 +26,21 @@ function showPage(){
 }
 
 var defaults = {"useVirtual":false,
-                "hideTimer":false,
                 "showScramble":true,
                 "realScrambles":true,
                 "randAUF":true,
                 "prescramble":true,
                 "goInOrder":false,
-                "goToNextCase":false,
                 "mirrorAllAlgs":false,
                 "mirrorAllAlgsAcrossS":false,
                 "colourneutrality1":"",
                 "colourneutrality2":"x2",
                 "colourneutrality3":"y",
-                "userDefined":false,
-                "userDefinedAlgs":"",
                 "fullCN":false,
                 "cubeType":"3x3",
-                "algsetpicker":document.getElementById("algsetpicker").options[0].value,
-                "useCustomColourScheme":false,
-                "customColourU":"white",
-                "customColourD":"yellow",
-                "customColourF":"green",
-                "customColourB":"blue",
-                "customColourR":"red",
-                "customColourL":"orange",
+                "algsetpicker":(document.getElementById("algsetpicker").options[0] || {}).value || "",
                 "visualCubeView":"plan",
+                "visualCubeMode":"flat",
                 "randomizeSMirror":false,
                 "randomizeMMirror":false,
                 "autoCorrectRotation":true,
@@ -82,182 +49,190 @@ var defaults = {"useVirtual":false,
 for (var setting in defaults){ 
 // If no previous setting exists, use default and update localStorage. Otherwise, set to previous setting
     if (typeof(defaults[setting]) === "boolean"){
+        var elementBool = document.getElementById(setting);
+        if (!elementBool){
+            continue;
+        }
         var previousSetting = localStorage.getItem(setting);
         if (previousSetting == null){
-            document.getElementById(setting).checked = defaults[setting];
+            elementBool.checked = defaults[setting];
             localStorage.setItem(setting, defaults[setting]);
         }
         else {
-            document.getElementById(setting).checked = previousSetting == "true"? true : false;
+            elementBool.checked = previousSetting == "true"? true : false;
         }
     }
     else {
         var previousSetting = localStorage.getItem(setting);
+        var element = document.getElementById(setting)
+        if (element == null){
+            continue;
+        }
         if (previousSetting == null){
-            var element = document.getElementById(setting)
-            if (element != null){
-                element.value = defaults[setting];
-            }
+            element.value = defaults[setting];
             localStorage.setItem(setting, defaults[setting]);
         }
         else {
-            var element = document.getElementById(setting)
-            if (element != null){
-                element.value = previousSetting;
-            }
+            element.value = previousSetting;
         }
     }
-}
-
-setTimerDisplay(!document.getElementById("hideTimer").checked);
-if (document.getElementById("userDefined").checked){
-    document.getElementById("userDefinedAlgs").style.display = "block";
 }
 
 document.getElementById("lines").addEventListener("change", function(){
     drawCube(cube.cubestate);    
 });
 
-var useCustomColourScheme = document.getElementById("useCustomColourScheme");
-useCustomColourScheme.addEventListener("click", function(){
-    localStorage.setItem("useCustomColourScheme", this.checked);
-
-    var algTest = algorithmHistory[historyIndex];
-    updateVisualCube(algTest ? algTest.preorientation+algTest.scramble : "");
-
-    drawCube(cube.cubestate);    
-});
-
-var customColourU = document.getElementById("customColourU");
-var customColourD = document.getElementById("customColourD");
-var customColourF = document.getElementById("customColourF");
-var customColourB = document.getElementById("customColourB");
-var customColourR = document.getElementById("customColourR");
-var customColourL = document.getElementById("customColourL");
-
-var customColours = [customColourU, customColourD, customColourF,
-                     customColourB, customColourR, customColourL];
-
-for (var i = 0; i < customColours.length; i++) {
-    customColours[i].addEventListener("change", function(){
-        this.value = this.value.trim();
-        localStorage.setItem(this.id, this.value);
-
-        var algTest = algorithmHistory[historyIndex];
-        updateVisualCube(algTest ? algTest.preorientation+algTest.scramble : "");
-
-        drawCube(cube.cubestate);
-    });
+if (document.getElementById("useVirtual")){
+    setVirtualCube(document.getElementById("useVirtual").checked);
 }
-
-var resetCustomColourScheme = document.getElementById("resetCustomColourScheme");
-resetCustomColourScheme.addEventListener("click", function(){
-    if (confirm("Reset custom colour scheme?")){
-        for (var setting in defaults){
-            if (setting.indexOf( "customColour" ) > -1){
-                document.getElementById(setting).value = defaults[setting];
-                localStorage.setItem(setting, defaults[setting]);
-            }
-        }
-
-        var algTest = algorithmHistory[historyIndex];
-        updateVisualCube(algTest ? algTest.preorientation+algTest.scramble : "");
-
-        drawCube(cube.cubestate);                
-    }
-});
-
-setVirtualCube(document.getElementById("useVirtual").checked);
 createCheckboxes();
 drawCube(cube.cubestate);
 updateVisualCube("");
+setCubeMode(localStorage.getItem("visualCubeMode") || "flat");
+
+var algOverrides = {};
+function ensureAlgOverrides(){
+    try {
+        var parsed = JSON.parse(localStorage.getItem("algOverrides"));
+        if (parsed && typeof parsed === "object"){
+            algOverrides = parsed;
+        }
+    } catch (error) {
+        algOverrides = {};
+    }
+    if (!algOverrides){
+        algOverrides = {};
+    }
+}
+ensureAlgOverrides();
+
+function normalizeAlgString(algStr){
+    if (!algStr){ return ""; }
+    var simplified = alg.cube.simplify(algStr).trim();
+    return simplified.replace(/\s+/g, "");
+}
+
+function applyAlgOverride(algStr){
+    var normalized = normalizeAlgString(algStr);
+    return algOverrides[normalized] || algStr;
+}
+
+function saveAlgOverrides(baseAlgs, newAlgs){
+    for (let i = 0; i < baseAlgs.length; i++){
+        var base = normalizeAlgString(baseAlgs[i]);
+        var replacement = newAlgs[i] ? normalizeAlgString(newAlgs[i]) : normalizeAlgString(baseAlgs[i]);
+        if (base){
+            algOverrides[base] = replacement;
+        }
+    }
+    localStorage.setItem("algOverrides", JSON.stringify(algOverrides));
+}
 
 var useVirtual = document.getElementById("useVirtual");
-useVirtual.addEventListener("click", function(){
-    setVirtualCube(this.checked);
-    localStorage.setItem("useVirtual", this.checked);
-    stopTimer(false);
-    document.getElementById("timer").innerHTML = "0.00";
-});
-
-var hideTimer = document.getElementById("hideTimer");
-hideTimer.addEventListener("click", function(){
-    setTimerDisplay(!this.checked);
-    localStorage.setItem("hideTimer", this.checked);
-    stopTimer(false);
-    document.getElementById("timer").innerHTML = "0.00";
-
-});
+if (useVirtual){
+    useVirtual.addEventListener("click", function(){
+        localStorage.setItem("useVirtual", this.checked);
+        setCubeMode(this.checked ? "virtual" : (localStorage.getItem("visualCubeMode") || "flat"));
+    });
+}
 
 var visualCubeContainer = document.getElementById("visual-cube-container");
-visualCubeContainer.addEventListener("click", function(){
-    var currentView = localStorage.getItem("visualCubeView")
-
-    var viewIndexes = {"plan":0, "":1, "hide": 2}
-
-    var viewIx = viewIndexes[currentView]
-
-    var newView = Object.entries(viewIndexes).find(([key, value]) => value === ((viewIx + 1)%3))[0]; 
-    localStorage.setItem("visualCubeView", newView);
-
-    if (newView == "hide"){
-        document.getElementById("visualcube").style.display = "none"
-    } else {
-        document.getElementById("visualcube").style.display = "block"
-        var algTest = algorithmHistory[historyIndex];
-        updateVisualCube(algTest ? algTest.preorientation+algTest.scramble : "");
-    }
-});
+if (visualCubeContainer){
+    visualCubeContainer.addEventListener("click", function(){
+        var currentMode = localStorage.getItem("visualCubeMode") || "flat";
+        var nextMode = cubeModes[(cubeModes.indexOf(currentMode) + 1) % cubeModes.length];
+        setCubeMode(nextMode);
+    });
+}
 
 
 var showScramble = document.getElementById("showScramble");
-showScramble.addEventListener("click", function(){
-    localStorage.setItem("showScramble", this.checked);
-});
+if (showScramble){
+    showScramble.addEventListener("click", function(){
+        localStorage.setItem("showScramble", this.checked);
+    });
+}
 
 var autoCorrectRotation = document.getElementById("autoCorrectRotation");
-autoCorrectRotation.addEventListener("click", function(){
-    localStorage.setItem("autoCorrectRotation", this.checked);
-});
+if (autoCorrectRotation){
+    autoCorrectRotation.addEventListener("click", function(){
+        localStorage.setItem("autoCorrectRotation", this.checked);
+    });
+}
 
 var realScrambles = document.getElementById("realScrambles");
-realScrambles.addEventListener("click", function(){
-    localStorage.setItem("realScrambles", this.checked);
-});
+if (realScrambles){
+    realScrambles.addEventListener("click", function(){
+        localStorage.setItem("realScrambles", this.checked);
+    });
+}
 
 var randAUF = document.getElementById("randAUF");
-randAUF.addEventListener("click", function(){
-    localStorage.setItem("randAUF", this.checked);
-});
+if (randAUF){
+    randAUF.addEventListener("click", function(){
+        localStorage.setItem("randAUF", this.checked);
+    });
+}
 
 var prescramble = document.getElementById("prescramble");
-prescramble.addEventListener("click", function(){
-    localStorage.setItem("prescramble", this.checked);
-});
+if (prescramble){
+    prescramble.addEventListener("click", function(){
+        localStorage.setItem("prescramble", this.checked);
+    });
+}
 
 var randomizeSMirror = document.getElementById("randomizeSMirror");
-randomizeSMirror.addEventListener("click", function(){
-    localStorage.setItem("randomizeSMirror", this.checked);
-});
+if (randomizeSMirror){
+    randomizeSMirror.addEventListener("click", function(){
+        localStorage.setItem("randomizeSMirror", this.checked);
+    });
+}
 
 var randomizeMMirror = document.getElementById("randomizeMMirror");
-randomizeMMirror.addEventListener("click", function(){
-    localStorage.setItem("randomizeMMirror", this.checked);
-});
+if (randomizeMMirror){
+    randomizeMMirror.addEventListener("click", function(){
+        localStorage.setItem("randomizeMMirror", this.checked);
+    });
+}
 
 var goInOrder = document.getElementById("goInOrder");
-goInOrder.addEventListener("click", function(){
-    localStorage.setItem("goInOrder", this.checked);
-    currentAlgIndex=0;
-});
+if (goInOrder){
+    goInOrder.addEventListener("click", function(){
+        localStorage.setItem("goInOrder", this.checked);
+        currentAlgIndex=0;
+    });
+}
 
-var goToNextCase = document.getElementById("goToNextCase");
-goToNextCase.addEventListener("click", function(){
-    if (isUsingVirtualCube()){
-        alert("Note: This option has no effect when using the virtual cube.")
-    }
-    localStorage.setItem("goToNextCase", this.checked);
-});
+var checkAnswerButton = document.getElementById("checkAnswer");
+if (checkAnswerButton){
+    checkAnswerButton.addEventListener("click", checkTypedAnswer);
+}
+var answerInput = document.getElementById("answerInput");
+if (answerInput){
+    answerInput.addEventListener("keydown", function(event){
+        if (event.key === "Enter"){
+            event.preventDefault();
+            checkTypedAnswer();
+        }
+    });
+}
+var saveAlgEditButton = document.getElementById("saveAlgEdit");
+if (saveAlgEditButton){
+    saveAlgEditButton.addEventListener("click", saveCurrentAlgEdit);
+}
+var openAlgEditor = document.getElementById("openAlgEditor");
+if (openAlgEditor){
+    openAlgEditor.addEventListener("click", function(){
+        var panel = document.getElementById("algEditorPanel");
+        if (panel){
+            panel.style.display = "block";
+        }
+        var currentTest = algorithmHistory[algorithmHistory.length-1];
+        if (currentTest){
+            document.getElementById("algEditor").value = currentTest.appliedAlgs.join("\n");
+        }
+    });
+}
 
 var mirrorAllAlgs = document.getElementById("mirrorAllAlgs");
 mirrorAllAlgs.addEventListener("click", function(){
@@ -267,12 +242,6 @@ mirrorAllAlgs.addEventListener("click", function(){
 var mirrorAllAlgsAcrossS = document.getElementById("mirrorAllAlgsAcrossS");
 mirrorAllAlgsAcrossS.addEventListener("click", function(){
     localStorage.setItem("mirrorAllAlgsAcrossS", this.checked);
-});
-
-var userDefined = document.getElementById("userDefined");
-userDefined.addEventListener("click", function(){
-    document.getElementById("userDefinedAlgs").style.display = this.checked? "block":"none";
-    localStorage.setItem("userDefined", this.checked);
 });
 
 var fullCN = document.getElementById("fullCN");
@@ -292,35 +261,6 @@ algsetpicker.addEventListener("change", function(){
     createCheckboxes();
 	shouldRecalculateStatistics = true;
     localStorage.setItem("algsetpicker", this.value);
-});
-
-var clearTimes = document.getElementById("clearTimes");
-clearTimes.addEventListener("click", function(){
-
-    if (confirm("Clear all times?")){
-        timeArray = [];
-        updateTimeList();
-        updateStats();
-    }
-
-});
-
-var deleteLast = document.getElementById("deleteLast");
-deleteLast.addEventListener("click", function(){
-    timeArray.pop();
-    algorithmHistory.pop();
-    updateTimeList();
-    updateStats();
-});
-
-var addSelected = document.getElementById("addSelected");
-addSelected.addEventListener("click", function(){
-
-    algList = createAlgList(true);
-    for (let i = 0; i < algList.length; i++){
-        algList[i] = algList[i].split("/")[0]
-    }
-    document.getElementById("userDefinedAlgs").value += "\n" + algList.join("\n");
 });
 
 try{ // only for mobile
@@ -382,51 +322,8 @@ function fillWithIndex(x, y, face, index, cubeArray, shouldBeCleared = false) {
     }
 
     var sticker = cubeArray[index];
-    var colour;
-    switch (sticker) {
-        case 1:
-            if (useCustomColourScheme.checked){
-                colour = customColourU.value;
-            } else {
-                colour = defaults["customColourU"];
-            }
-            break;
-        case 2:
-            if (useCustomColourScheme.checked){
-                colour = customColourR.value;
-            } else {
-                colour = defaults["customColourR"];
-            }
-            break;
-        case 3:
-            if (useCustomColourScheme.checked){
-                colour = customColourF.value;
-            } else {
-                colour = defaults["customColourF"];
-            }
-            break;
-        case 4:
-            if (useCustomColourScheme.checked){
-                colour = customColourD.value;
-            } else {
-                colour = defaults["customColourD"];
-            }
-            break;
-        case 5:
-            if (useCustomColourScheme.checked){
-                colour = customColourL.value;
-            } else {
-                colour = defaults["customColourL"];
-            }
-            break;
-        case 6:
-            if (useCustomColourScheme.checked){
-                colour = customColourB.value;
-            } else {
-                colour = defaults["customColourB"];
-            }
-            break;
-    }
+    var colourMap = ["", "white", "red", "green", "yellow", "orange", "blue"];
+    var colour = colourMap[sticker] || "black";
     if(shouldBeCleared){
         colour = "black";
     }
@@ -566,10 +463,6 @@ function drawCube(cubeArray) {
 function doAlg(algorithm){
     cube.doAlgorithm(algorithm);
     drawCube(cube.cubestate);
-
-    if (timerIsRunning && cube.isSolved() && isUsingVirtualCube()){
-        stopTimer();
-    }
 }
 
 
@@ -889,7 +782,7 @@ function addAUFs(algArr){
 
 function generateAlgScramble(raw_alg,set,obfuscateAlg,shouldPrescramble){
     
-    if (set == "F3L" && !document.getElementById("userDefined").checked){
+    if (set == "F3L"){
         return Cube.random().solve();
     }
     if (!obfuscateAlg){
@@ -970,17 +863,7 @@ function generateAlgScramble(raw_alg,set,obfuscateAlg,shouldPrescramble){
         default:  
 
             let inverse = alg.cube.invert(raw_alg);
-            if (document.getElementById("userDefined").checked){
-                // postmoves and premoves should be used when the algset is unknown
-                // Ensures that it shuold be hard to guess the solution even for 
-                // unusual and unexpected use cases
-                return obfuscate(inverse, numPremoves=3, minLength=13, numPostmoves=3);
-            }
-            else {
-                // Use only premoves by default to save time 
-                // TODO: it may be worth researching this
-                return obfuscate(inverse);
-            }
+            return obfuscate(inverse);
     }
 
 }
@@ -1002,17 +885,7 @@ function generatePreScramble(raw_alg, generator, times, obfuscateAlg, premoves="
 
     if (obfuscateAlg){
         
-        if (document.getElementById("userDefined").checked){
-            // postmoves and premoves should be used when the algset is unknown
-            // Ensures that it shuold be hard to guess the solution even for 
-            // unusual and unexpected use cases
-            return obfuscate(scramble, numPremoves=3, minLength=13, numPostmoves=3);
-        }
-        else {
-            // Use only premoves by default to save time 
-            // TODO: it may be worth researching this
-            return obfuscate(scramble);
-        }
+        return obfuscate(scramble);
     }
     else {
         return scramble;
@@ -1060,13 +933,12 @@ function generateOrientation(){
 }
 
 class AlgTest {
-    constructor(rawAlgs, scramble, solutions, preorientation, solveTime, time, set, visualCubeView, cubeType, orientRandPart) {
-        this.rawAlgs = rawAlgs;
+    constructor(baseAlgs, appliedAlgs, scramble, solutions, preorientation, set, visualCubeView, cubeType, orientRandPart) {
+        this.baseAlgs = baseAlgs;
+        this.appliedAlgs = appliedAlgs;
         this.scramble = scramble;
         this.solutions = solutions;
         this.preorientation = preorientation;
-        this.solveTime = solveTime;
-        this.time = time;
         this.set = set;
         this.visualCubeView = visualCubeView;
         this.cubeType = cubeType;
@@ -1124,34 +996,34 @@ function generateAlgTest(){
         shouldRecalculateStatistics = false;
     }
     var rawAlgStr = randomFromList(algList);
-    var rawAlgs = rawAlgStr.split("/");
-    rawAlgs = fixAlgorithms(rawAlgs);
+    var baseAlgs = fixAlgorithms(rawAlgStr.split("/"));
+    var appliedAlgs = baseAlgs.map(a => applyAlgOverride(a));
 
     //Do non-randomized mirroring first. This allows a user to practise left slots, back slots, front slots, rights slots
     // etc for F2L like algsets
     if (mirrorAllAlgs.checked && !randomizeMMirror.checked) {
-        rawAlgs = mirrorAlgsAcrossAxis(rawAlgs, axis="M");
+        appliedAlgs = mirrorAlgsAcrossAxis(appliedAlgs, axis="M");
     }
     if (mirrorAllAlgsAcrossS.checked && !randomizeSMirror.checked) {
-        rawAlgs = mirrorAlgsAcrossAxis(rawAlgs, axis="S");
+        appliedAlgs = mirrorAlgsAcrossAxis(appliedAlgs, axis="S");
     }
     if (mirrorAllAlgs.checked && randomizeMMirror.checked) {
         if (Math.random() > 0.5){
-            rawAlgs = mirrorAlgsAcrossAxis(rawAlgs, axis="M");
+            appliedAlgs = mirrorAlgsAcrossAxis(appliedAlgs, axis="M");
         }
     }
     if (mirrorAllAlgsAcrossS.checked && randomizeSMirror.checked) {
         if (Math.random() > 0.5){
-            rawAlgs = mirrorAlgsAcrossAxis(rawAlgs, axis="S");
+            appliedAlgs = mirrorAlgsAcrossAxis(appliedAlgs, axis="S");
         }
     }
 
 
     var solutions;
     if (randAUF){
-        solutions = addAUFs(rawAlgs);
+        solutions = addAUFs(appliedAlgs.slice());
     } else {
-        solutions = rawAlgs;
+        solutions = appliedAlgs.slice();
     }
 
 
@@ -1163,13 +1035,10 @@ function generateAlgTest(){
     var [preorientation, orientRandPart] = generateOrientation();
     orientRandPart = alg.cube.simplify(orientRandPart);
 
-    var cubeType = document.getElementById("cubeType");
-
-    var solveTime = null;
-    var time = Date.now();
+    var cubeType = document.getElementById("cubeType").value;
     var visualCubeView = "plan";
 
-    var algTest = new AlgTest(rawAlgs, scramble, solutions, preorientation, solveTime, time, set, visualCubeView, cubeType, orientRandPart);
+    var algTest = new AlgTest(baseAlgs, appliedAlgs, scramble, solutions, preorientation, set, visualCubeView, cubeType, orientRandPart);
     return algTest;
 }
 function testAlg(algTest, addToHistory=true){
@@ -1240,7 +1109,7 @@ function reTestAlg(){
 
 }
 
-function updateTrainer(scramble, solutions, algorithm, timer){
+function updateTrainer(scramble, solutions, algorithm){
     if (scramble!=null){
         document.getElementById("scramble").innerHTML = scramble;
     }
@@ -1252,10 +1121,6 @@ function updateTrainer(scramble, solutions, algorithm, timer){
         cube.resetCube();
         doAlg(algorithm);
         updateVisualCube(algorithm);
-    }
-
-    if (timer!=null){
-        document.getElementById("timer").innerHTML = timer;
     }
 }
 function fixAlgorithms(algorithms){
@@ -1269,49 +1134,6 @@ function fixAlgorithms(algorithms){
 
 }
 
-function validTextColour(stringToTest) {
-    if (stringToTest === "") { return false; }
-    if (stringToTest === "inherit") { return false; }
-    if (stringToTest === "transparent") { return false; }
-
-    var visualCubeColoursArray = ['black', 'dgrey', 'grey', 'silver', 'white', 'yellow', 
-                                  'red', 'orange', 'blue', 'green', 'purple', 'pink'];
-
-    if (stringToTest[0] !== '#') {
-        return visualCubeColoursArray.indexOf(stringToTest) > -1;
-    } else {
-        return /^#[0-9A-F]{6}$/i.test(stringToTest)
-    }
-}
-
-function validateCustomColourScheme(){
-    var invalidColours = [];
-
-    for (var i = 0; i < customColours.length; i++) {
-        if (!validTextColour(customColours[i].value)) {
-            invalidColours.push(customColours[i].value);
-            customColours[i].value = defaults[customColours[i].id];
-            localStorage.setItem(customColours[i].id, customColours[i].value);
-        }
-    }
-
-    if (invalidColours.length > 0) {
-        alert("The following custom colours are not supported and were reset to default:\n" + 
-              invalidColours.join(", ") + "\n\n" +
-              "Either use #RRGGBB, or one of the following colour names:\n" +
-              "black, dgrey, grey, silver, white, yellow, red, orange, blue, green, purple, pink."
-             );
-    }
-}
-
-function stripLeadingHashtag(colour){
-    if (colour[0] == '#'){
-        return colour.substring(1);
-    }
-
-    return colour;
-}
-
 function updateVisualCube(algorithm){
 
     switch (document.getElementById("cubeType").value){
@@ -1323,22 +1145,19 @@ function updateVisualCube(algorithm){
             break;
     }
 
-    var view = localStorage.getItem("visualCubeView");
-
-    var imgsrc = "https://www.cubing.net/api/visualcube/?fmt=svg&size=300&view=" + view + "&bg=black&pzl=" + pzl + "&alg=x2" + algorithm;
-
-    if (useCustomColourScheme.checked){
-        validateCustomColourScheme();
-
-        imgsrc += "&sch=" + stripLeadingHashtag(customColourD.value) + "," + 
-            stripLeadingHashtag(customColourR.value) + "," +
-            stripLeadingHashtag(customColourB.value) + "," +
-            stripLeadingHashtag(customColourU.value) + "," +
-            stripLeadingHashtag(customColourL.value) + "," + 
-            stripLeadingHashtag(customColourF.value);
+    var mode = localStorage.getItem("visualCubeMode") || "flat";
+    if (mode === "virtual"){
+        return;
     }
 
-    document.getElementById("visualcube").src = imgsrc;
+    var view = mode === "flat" ? "plan" : "";
+
+    var imgsrc = "https://www.cubing.net/api/visualcube/?fmt=svg&size=320&view=" + view + "&bg=black&pzl=" + pzl + "&alg=x2" + algorithm;
+
+    var imgEl = document.getElementById("visualcube");
+    if (imgEl){
+        imgEl.src = imgsrc;
+    }
 }
 
 function displayAlgorithm(algTest, reTest=true){    
@@ -1348,7 +1167,7 @@ function displayAlgorithm(algTest, reTest=true){
         reTestAlg();
     }
 
-    updateTrainer(algTest.scramble, algTest.solutions.join("<br><br>"), null, null);
+    updateTrainer(algTest.scramble, algTest.solutions.join("<br><br>"), null);
 
     scramble.style.color = '#e6e6e6';
 }
@@ -1359,16 +1178,8 @@ function displayAlgorithmFromHistory(index){
 
     console.log( algTest );
 
-    var timerText;
-    if (algTest.solveTime == null){
-        timerText = 'n/a'
-    } else {
-        timerText = algTest.solveTime.toString()
-    }
-
-    //updateTrainer("<span style=\"color: #90f182\">" + algTest.orientRandPart + "</span>" + " "+ algTest.scramble, algTest.solutions.join("<br><br>"), algTest.preorientation+algTest.scramble, timerText);
-    updateTrainer(algTest.getHtmlFormattedScramble(), algTest.solutions.join("<br><br>"), algTest.preorientation+algTest.scramble, timerText);
-
+    updateTrainer(algTest.getHtmlFormattedScramble(), algTest.solutions.join("<br><br>"), algTest.preorientation+algTest.scramble);
+    resetAnswerUI(algTest);
     scramble.style.color = '#e6e6e6';
 }
 
@@ -1384,9 +1195,80 @@ function displayAlgorithmForPreviousTest(reTest=true){//not a great name
     }
 
     //updateTrainer("<span style=\"color: #90f182\">" + lastTest.orientRandPart + "</span>" + " "+ lastTest.scramble, lastTest.solutions.join("<br><br>"), null, null);
-    updateTrainer(lastTest.getHtmlFormattedScramble(), lastTest.solutions.join("<br><br>"), null, null);
-
+    updateTrainer(lastTest.getHtmlFormattedScramble(), lastTest.solutions.join("<br><br>"), null);
+    resetAnswerUI(lastTest);
     scramble.style.color = '#e6e6e6';
+}
+
+function checkTypedAnswer(){
+    var answerInput = document.getElementById("answerInput");
+    var feedback = document.getElementById("answerFeedback");
+    if (!answerInput || !feedback || algorithmHistory.length === 0){
+        return;
+    }
+
+    var attempt = answerInput.value.trim();
+    if (attempt === ""){
+        feedback.innerHTML = "Type an algorithm first.";
+        feedback.style.color = "#f5a623";
+        return;
+    }
+
+    var normalizedAttempt;
+    try {
+        normalizedAttempt = normalizeAlgString(attempt);
+    } catch (error) {
+        feedback.innerHTML = "That doesn't look like a valid alg.";
+        feedback.style.color = "#ff7b7b";
+        return;
+    }
+
+    var idx = historyIndex >= 0 ? historyIndex : algorithmHistory.length - 1;
+    var currentTest = algorithmHistory[idx];
+    var normalizedSolutions = currentTest.solutions.map((sol) => normalizeAlgString(sol));
+
+    if (normalizedSolutions.includes(normalizedAttempt)){
+        feedback.innerHTML = "Correct!";
+        feedback.style.color = "#90f182";
+    } else {
+        feedback.innerHTML = "Not quite. Solution: " + currentTest.solutions.join(" / ");
+        feedback.style.color = "#ff7b7b";
+    }
+}
+
+function saveCurrentAlgEdit(){
+    var algEditor = document.getElementById("algEditor");
+    var feedback = document.getElementById("answerFeedback");
+    if (!algEditor || algorithmHistory.length === 0){
+        return;
+    }
+    var idx = historyIndex >= 0 ? historyIndex : algorithmHistory.length - 1;
+    var currentTest = algorithmHistory[idx];
+    var editedLines = algEditor.value.split("\n").map(line => line.trim()).filter(line => line.length>0);
+    if (editedLines.length === 0){
+        editedLines = currentTest.baseAlgs.slice();
+    }
+
+    try {
+        saveAlgOverrides(currentTest.baseAlgs, editedLines);
+        currentTest.appliedAlgs = editedLines.slice();
+        if (document.getElementById("randAUF").checked){
+            currentTest.solutions = addAUFs(editedLines.slice());
+        } else {
+            currentTest.solutions = editedLines.slice();
+        }
+    } catch (error) {
+        if (feedback){
+            feedback.innerHTML = "Couldn't save: please check the alg format.";
+            feedback.style.color = "#ff7b7b";
+        }
+        return;
+    }
+
+    if (feedback){
+        feedback.innerHTML = "Saved. Future scrambles will use your edits.";
+        feedback.style.color = "#90f182";
+    }
 }
 
 function randomFromList(set){
@@ -1400,95 +1282,6 @@ function randomFromList(set){
 
     return set[rand];
 
-}
-var starttime;
-var timerUpdateInterval;
-var timerIsRunning = false;
-function startTimer(){
-
-    if (timerIsRunning){
-        return;
-    }
-
-    if (document.getElementById("timer").style.display == 'none'){
-        //don't do anything if timer is hidden
-        return;
-    }
-    starttime = Date.now();
-    timerUpdateInterval = setInterval(updateTimer, 1);
-    timerIsRunning = true;
-}
-
-function stopTimer(logTime=true){
-
-    if (!timerIsRunning){
-        return;
-    }
-
-    if (document.getElementById("timer").style.display == 'none'){
-        //don't do anything if timer is hidden
-        return;
-    }
-
-
-    clearInterval(timerUpdateInterval);
-    timerIsRunning = false;
-
-    var time = parseFloat(document.getElementById("timer").innerHTML);
-    if (isNaN(time)){
-        return NaN;
-    }
-
-
-    if (logTime){
-        var lastTest = algorithmHistory[algorithmHistory.length-1];
-        var solveTime = new SolveTime(time,'');
-        lastTest.solveTime = solveTime;
-        timeArray.push(solveTime);
-        console.log(timeArray);
-        updateTimeList();
-    }
-
-    updateStats();
-    return time;
-}
-
-function updateTimer(){
-    document.getElementById("timer").innerHTML = ((Date.now()-starttime)/1000).toFixed(2);
-}
-var timeArray = [];
-
-function getMean(timeArray){
-    var i;
-    var total = 0;
-    for(i=0;i<timeArray.length;i++){
-        total += timeArray[i].timeValue();
-    }
-
-    return total/timeArray.length;
-}
-
-function updateStats(){
-    var statistics = document.getElementById("statistics");
-
-    statistics.innerHTML = "&nbsp";
-
-    if (timeArray.length!=0){
-        statistics.innerHTML += "Mean of " + timeArray.length + ": " + getMean(timeArray).toFixed(2) + "<br>";
-    }
-
-}
-
-
-
-function updateTimeList(){
-    var i;
-    var timeList = document.getElementById("timeList");
-    timeList.innerHTML = "&nbsp";
-    for (i=0; i<timeArray.length;i++){
-        timeList.innerHTML += timeArray[i].toString();
-        timeList.innerHTML += " ";
-    }
 }
 
 //Create Checkboxes for each subset
@@ -1550,52 +1343,7 @@ function clearSelectedAlgsets(){
     }
 }
 
-function findMistakesInUserAlgs(userAlgs){
-    var errorMessage = "";
-    var newList = [];
-    var newListDisplay = [] // contains all valid algs + commented algs
-    for (var i = 0; i < userAlgs.length; i++){
-        if (userAlgs[i].trim().startsWith("#")){
-            // Allow 'commenting' of algs with #, like python
-            newListDisplay.push(userAlgs[i]);
-            continue;
-        }
-        userAlgs[i] = userAlgs[i].replace(/[\u2018\u0060\u2019\u00B4]/g, "'"); 
-        //replace astrophe like characters with '
-        try {
-            alg.cube.simplify(userAlgs[i]);
-            if (userAlgs[i].trim()!="" ){
-                newList.push(userAlgs[i]);
-                newListDisplay.push(userAlgs[i]);
-            }
-        }
-        catch(err){
-            errorMessage += "\"" + userAlgs[i] + "\"" + " is an invalid alg and has been removed\n";
-        }
-    }
-
-    if (errorMessage!=""){
-        alert(errorMessage);
-    }
-
-    document.getElementById("userDefinedAlgs").value = newListDisplay.join("\n");
-    localStorage.setItem("userDefinedAlgs", newList.join("\n"));
-    return newList;
-}
-
-function createAlgList(overrideUserDefined=false){
-
-    if (!overrideUserDefined){
-        // Sometimes we want to ignore that the userdefined box is checked, and 
-        // retrieve whatever is selected from the trainer itself
-        if (document.getElementById("userDefined").checked){
-            algList = findMistakesInUserAlgs(document.getElementById("userDefinedAlgs").value.split("\n"));
-            if (algList.length==0){
-                alert("Please enter some algs into the User Defined Algs box.");
-            }
-            return algList;
-        }
-    }
+function createAlgList(){
     var algList = [];
 
     var set = document.getElementById("algsetpicker").value;
@@ -1670,66 +1418,57 @@ function toggleVirtualCube(){
 
 function setVirtualCube(setting){
     var sim = document.getElementById("simcube");
-    if (setting){
-        sim.style.display = 'block';
+    sim.style.display = setting ? 'block' : 'none';
+}
+
+function setCubeMode(mode){
+    if (!cubeModes.includes(mode)){
+        mode = "flat";
+    }
+    localStorage.setItem("visualCubeMode", mode);
+    var label = document.getElementById("cubeModeLabel");
+    var img = document.getElementById("visualcube");
+    var useVirtualCheckbox = document.getElementById("useVirtual");
+
+    if (mode === "virtual"){
+        setVirtualCube(true);
+        if (img){ img.style.display = "none"; }
+        if (label){ label.textContent = "Virtual cube"; }
+        if (useVirtualCheckbox){ useVirtualCheckbox.checked = true; }
     } else {
-        sim.style.display = 'none';
-        document.getElementById("timer").style.display = 'block'; //timer has to be shown when simulator cube is not used
-        document.getElementById("hideTimer").checked = false;
+        setVirtualCube(false);
+        if (img){ img.style.display = "block"; }
+        if (mode === "3d"){
+            localStorage.setItem("visualCubeView", "");
+            if (label){ label.textContent = "3D view"; }
+        } else {
+            localStorage.setItem("visualCubeView", "plan");
+            if (label){ label.textContent = "Flat view"; }
+        }
+        if (useVirtualCheckbox){ useVirtualCheckbox.checked = false; }
+        var algTest = algorithmHistory[historyIndex];
+        updateVisualCube(algTest ? algTest.preorientation+algTest.scramble : "");
     }
 }
 
-function setTimerDisplay(setting){
-    var timer = document.getElementById("timer");
-    if (!isUsingVirtualCube()){
-        alert("The timer can only be hidden when using the simulator cube.");
-        document.getElementById("hideTimer").checked = false;
-    }
-    else if (setting){
-        timer.style.display = 'block';
-    } else {
-        timer.style.display = 'none';
-    }
-}
-
-function isUsingVirtualCube(){
-    var sim = document.getElementById("simcube")
-
-    if (sim.style.display == 'none'){
-        return false;
-    }
-    else {
-        return true;
-    }
-}
-
-
-var listener = new Listener();
-
-lastKeyMap = null;
-
+var historyIndex;
 
 function handleLeftButton() {
-    if (algorithmHistory.length<=1 || timerIsRunning){
+    if (algorithmHistory.length<=1){
         return;
     }
     historyIndex--;
 
     if (historyIndex<0){
-        alert('Reached end of solve log');
         historyIndex = 0;
     }
     displayAlgorithmFromHistory(historyIndex);
 }
 
 function handleRightButton() {
-    if (timerIsRunning){
-        return;
-    }
     historyIndex++;
     if (historyIndex>=algorithmHistory.length){
         nextScramble();
-        doNothingNextTimeSpaceIsPressed = false;
         return;
     }
 
@@ -1743,183 +1482,27 @@ document.getElementById("onscreenRight").addEventListener("click", handleRightBu
 
 }
 
-function updateControls() {
-    let keymaps = getKeyMaps();
-
-    if (JSON.stringify(keymaps) === JSON.stringify(lastKeyMap)) {
-        return false;
+function resetAnswerUI(targetTest = algorithmHistory[algorithmHistory.length-1]){
+    var answerInput = document.getElementById("answerInput");
+    if (answerInput){
+        answerInput.value = "";
     }
-
-    lastKeyMap = keymaps;
-
-    listener.reset();
-
-    keymaps.forEach(function(keymap){
-        listener.register(keymap[0], function() {  doAlg(keymap[1]) });
-    });
-    listener.register(new KeyCombo("Backspace"), function() { displayAlgorithmForPreviousTest();});
-    listener.register(new KeyCombo("Escape"), function() {
-        if (isUsingVirtualCube()){
-            stopTimer(false);
-        }
-        reTestAlg();
-        document.getElementById("scramble").innerHTML = "&nbsp;";
-        document.getElementById("algdisp").innerHTML = "";
-    });
-    listener.register(new KeyCombo("Enter"), function() {
-        nextScramble();
-        doNothingNextTimeSpaceIsPressed = false;
-    });
-    listener.register(new KeyCombo("Tab"), function() {
-        nextScramble();
-        doNothingNextTimeSpaceIsPressed = false;
-    });
-    listener.register(new KeyCombo("ArrowLeft"), handleLeftButton);
-    listener.register(new KeyCombo("ArrowRight"), handleRightButton);
+    var feedback = document.getElementById("answerFeedback");
+    if (feedback){
+        feedback.innerHTML = "&nbsp;";
+    }
+    var algEditor = document.getElementById("algEditor");
+    if (algEditor && targetTest && document.getElementById("algEditorPanel").style.display === "block"){
+        algEditor.value = targetTest.appliedAlgs.join("\n");
+    }
 }
 
-setInterval(updateControls, 300);
-
-
-function nextScramble(displayReady=true){
+function nextScramble(){
     document.getElementById("scramble").style.color = "white";
-    stopTimer(false);
-    if (displayReady){
-        document.getElementById("timer").innerHTML = 'Ready';
-    };
-    if (isUsingVirtualCube() ){
-        testAlg(generateAlgTest());
-        startTimer();
-    }
-    else {
-        testAlg(generateAlgTest());
-    }
+    testAlg(generateAlgTest());
     historyIndex = algorithmHistory.length - 1;
+    resetAnswerUI();
 }
-
-var historyIndex;
-
-
-function release(event) {
-    if (event.key == " " || event.type=="touchend") { //space
-
-        if (document.activeElement.type == "textarea"){
-            return;
-        }
-        document.getElementById("timer").style.color = "white"; //Timer should never be any color other than white when space is not pressed down
-        if (!isUsingVirtualCube()){
-            if (document.getElementById("algdisp").innerHTML == ""){
-                //Right after a new scramble is displayed, space starts the timer
-
-
-                if (doNothingNextTimeSpaceIsPressed){
-                    doNothingNextTimeSpaceIsPressed = false;
-                }
-                else {
-                    startTimer(); 
-                }
-            }
-        }
-    }
-};
-document.onkeyup = release
-try { //only for mobile
-document.getElementById("touchStartArea").addEventListener("touchend", release);
-} catch(error) {
-
-}
-
-var doNothingNextTimeSpaceIsPressed = true;
-function press(event) { //Stops the screen from scrolling down when you press space
-
-    if (event.key == " " || event.type == "touchstart") { //space
-        if (document.activeElement.type == "textarea"){
-            return;
-        }
-        event.preventDefault();
-        if (!event.repeat){
-            if (isUsingVirtualCube()){
-                if (timerIsRunning){
-                    stopTimer();
-                    displayAlgorithmForPreviousTest();//put false here if you don't want the cube to retest.
-                    //window.setTimeout(function (){reTestAlg();}, 250);
-                }
-                else {
-                    displayAlgorithmForPreviousTest();
-                }
-
-            }
-            else { //If not using virtual cube
-                if (timerIsRunning){//If timer is running, stop timer
-                    var time = stopTimer();
-                    doNothingNextTimeSpaceIsPressed = true;
-                    if (document.getElementById("goToNextCase").checked){
-                        nextScramble(false);
-
-                        //document.getElementById("timer").innerHTML = time;
-                    } else {
-                        displayAlgorithmForPreviousTest();
-                    }
-
-                }
-                else if (document.getElementById("algdisp").innerHTML != ""){
-                    nextScramble(); //If the solutions are currently displayed, space should test on the next alg.
-
-                    doNothingNextTimeSpaceIsPressed = true;
-                }
-
-                else if (document.getElementById("timer").innerHTML == "Ready"){
-                    document.getElementById("timer").style.color = "green";
-                }
-            }
-        }
-    }
-
-};
-document.onkeydown = press;
-try { //only for mobile
-    document.getElementById("touchStartArea").addEventListener("touchstart", press);
-} catch (error) {
-
-}
-
-
-class SolveTime {
-    constructor(time, penalty) {
-        this.time = time;
-        this.penalty = penalty;
-    }
-
-    toString(decimals=2) {
-        var timeString = this.time.toFixed(decimals)
-        switch (this.penalty) {
-            case '+2':
-                return (this.time + 2).toFixed(decimals) + '+';
-            case 'DNF':
-                return 'DNF' + "(" + timeString + ")";
-            default:
-                return timeString;
-        }
-    }
-
-    timeValue() {
-
-        switch (this.penalty) {
-            case '+2':
-                return this.time + 2;
-            case 'DNF':
-                return Infinity;
-            default:
-                return this.time;
-        }
-    }
-
-}
-
-
-
-
-
 
 //CUBE OBJECT
 function RubiksCube() {
