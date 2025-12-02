@@ -108,9 +108,32 @@ ensureAlgOverrides();
 
 function normalizeAlgString(algStr){
     if (!algStr){ return ""; }
-    var simplified = alg.cube.simplify(algStr).trim();
+    // Strip grouping characters so users can add parentheses/brackets for clarity
+    var cleaned = algStr.replace(/[()\[\]]/g, "");
+    var simplified = alg.cube.simplify(cleaned).trim();
     return simplified.replace(/\s+/g, "");
 }
+
+function isAUFMove(m){
+    return /^([Uy](w)?)(2|')?$/.test(m);
+}
+
+function stripTrailingAUF(algStr){
+    // Remove trailing U/y rotations; keep leading AUF intact for orientation-specific training
+    if (!algStr){ return ""; }
+    var moves = alg.cube.simplify(algStr).trim().split(/\s+/);
+    while (moves.length && isAUFMove(moves[moves.length - 1])) {
+        moves.pop();
+    }
+    return moves.join(" ");
+}
+
+function shouldIgnoreAUFForSet(setName){
+    // Only ignore AUF for pure orientation algsets like OLL
+    if (!setName){ return false; }
+    return /(^|\s)OLL(\s|\(|$)/i.test(setName);
+}
+
 
 function unlockAlgEditor(){
     var container = document.getElementById("alg-editor");
@@ -1317,7 +1340,19 @@ function checkTypedAnswer(){
     var currentTest = algorithmHistory[idx];
     var normalizedSolutions = currentTest.solutions.map((sol) => normalizeAlgString(sol));
 
-    if (normalizedSolutions.includes(normalizedAttempt)){
+    var isCorrect = normalizedSolutions.includes(normalizedAttempt);
+
+    if (!isCorrect && shouldIgnoreAUFForSet(currentTest.set)){
+        try {
+            var aufStrippedAttempt = normalizeAlgString(stripTrailingAUF(attempt));
+            var aufStrippedSolutions = currentTest.solutions.map((sol) => normalizeAlgString(stripTrailingAUF(sol)));
+            isCorrect = aufStrippedSolutions.includes(aufStrippedAttempt);
+        } catch (error) {
+            // fall through to regular incorrect handling
+        }
+    }
+
+    if (isCorrect){
         feedback.innerHTML = "Correct!";
         feedback.style.color = "#90f182";
     } else {
