@@ -85,7 +85,6 @@ document.getElementById("lines").addEventListener("change", function(){
 if (document.getElementById("useVirtual")){
     setVirtualCube(document.getElementById("useVirtual").checked);
 }
-createCheckboxes();
 drawCube(cube.cubestate);
 updateVisualCube("");
 setCubeMode(localStorage.getItem("visualCubeMode") || "flat");
@@ -106,16 +105,54 @@ function ensureAlgOverrides(){
 }
 ensureAlgOverrides();
 
+var algsetSelections = {};
+function ensureAlgsetSelections(){
+    try {
+        var parsed = JSON.parse(localStorage.getItem("algsetSelections"));
+        if (parsed && typeof parsed === "object"){
+            algsetSelections = parsed;
+        }
+    } catch (error) {
+        algsetSelections = {};
+    }
+    if (!algsetSelections){
+        algsetSelections = {};
+    }
+}
+function persistAlgsetSelection(setName, subsetName, isChecked){
+    if (!algsetSelections[setName] && isChecked){
+        algsetSelections[setName] = {};
+    }
+    if (algsetSelections[setName]){
+        if (isChecked){
+            algsetSelections[setName][subsetName] = true;
+        } else {
+            delete algsetSelections[setName][subsetName];
+            if (Object.keys(algsetSelections[setName]).length === 0){
+                delete algsetSelections[setName];
+            }
+        }
+    }
+    localStorage.setItem("algsetSelections", JSON.stringify(algsetSelections));
+}
+function isSubsetSelected(setName, subsetName){
+    return !!(algsetSelections[setName] && algsetSelections[setName][subsetName]);
+}
+ensureAlgsetSelections();
+createCheckboxes();
+
 function normalizeAlgString(algStr){
     if (!algStr){ return ""; }
     // Strip grouping characters so users can add parentheses/brackets for clarity
     var cleaned = algStr.replace(/[()\[\]]/g, "");
     var simplified = alg.cube.simplify(cleaned).trim();
+    // Treat double moves with a prime (straight or curly) the same as a regular 180 turn
+    simplified = simplified.replace(/([URFDLBMESxyz][w]?2)['’]/gi, "$12");
     return simplified.replace(/\s+/g, "");
 }
 
 function isAUFMove(m){
-    return /^([Uy](w)?)(2|')?$/.test(m);
+    return /^([Uy](w)?)(2'?|')?$/i.test(m);
 }
 
 function stripTrailingAUF(algStr){
@@ -1440,26 +1477,34 @@ function createCheckboxes(){
         full_set = window.algs[set]
     }
     var subsets = Object.keys(full_set);
+    var setName = set;
 
     var myDiv = document.getElementById("cboxes");
 
     myDiv.innerHTML = "";
 
     for (var i = 0; i < subsets.length; i++) {
-        var checkBox = document.createElement("input");
+        var subsetName = subsets[i];
         var label = document.createElement("label");
+        label.className = "algset-option";
+        var checkBox = document.createElement("input");
         checkBox.type = "checkbox";
-        checkBox.value = subsets[i];
-        checkBox.onclick = function(){
+        checkBox.value = subsetName;
+        checkBox.checked = isSubsetSelected(setName, subsetName);
+        checkBox.addEventListener("change", function(){
             currentAlgIndex = 0;
             shouldRecalculateStatistics=true; 
             //Every time a checkbox is pressed, the algset statistics should be updated.
-        }
-        checkBox.setAttribute("id", set.toLowerCase() +  subsets[i]);
+            persistAlgsetSelection(setName, this.value, this.checked);
+        });
+        checkBox.setAttribute("id", set.toLowerCase() +  subsetName);
+        label.setAttribute("for", checkBox.id);
 
-        myDiv.appendChild(checkBox);
+        label.appendChild(checkBox);
+        var textSpan = document.createElement("span");
+        textSpan.appendChild(document.createTextNode(subsets[i]));
+        label.appendChild(textSpan);
         myDiv.appendChild(label);
-        label.appendChild(document.createTextNode(subsets[i]));
     }
 }
 

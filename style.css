@@ -104,6 +104,27 @@ th, td, tr{
     padding: 8px;
 }
 
+#cboxes {
+    margin-top: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.algset-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    border-radius: 8px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.06);
+}
+
+.algset-option input {
+    margin: 0;
+}
+
 a:link {
     color: #8ad0ff
 }
